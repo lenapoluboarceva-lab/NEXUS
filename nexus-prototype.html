@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101114">
+  <title>NEXUS — личный ИИ</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101114; --panel:#191b20; --panel2:#22252c; --text:#f2f3f5; --muted:#9a9da7; --line:#2c2f37; --accent:#d9dce5; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--text); font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; display:flex; flex-direction:column; }
+    header { height:62px; display:flex; align-items:center; justify-content:space-between; padding:0 18px; border-bottom:1px solid var(--line); background:rgba(16,17,20,.94); }
+    .brand { font-weight:700; letter-spacing:.16em; font-size:15px; }
+    .status { color:var(--muted); font-size:12px; display:flex; align-items:center; gap:7px; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#d2a65d; display:inline-block; }
+    main { width:100%; max-width:820px; margin:0 auto; padding:28px 18px 16px; flex:1; display:flex; flex-direction:column; }
+    .welcome { margin:auto 0; text-align:center; padding:36px 0; }
+    .welcome h1 { font-size:30px; letter-spacing:.12em; margin:0 0 10px; }
+    .welcome p { color:var(--muted); margin:0 auto; max-width:420px; line-height:1.55; font-size:14px; }
+    #messages { display:flex; flex-direction:column; gap:16px; padding:10px 0 24px; }
+    .msg { max-width:88%; padding:13px 15px; border-radius:17px; line-height:1.5; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .user { align-self:flex-end; background:#30343d; border-bottom-right-radius:5px; }
+    .assistant { align-self:flex-start; background:var(--panel); border:1px solid var(--line); border-bottom-left-radius:5px; }
+    .tag { color:var(--muted); font-size:10px; letter-spacing:.1em; margin-bottom:5px; }
+    .composer { position:sticky; bottom:0; padding:12px 0 max(12px, env(safe-area-inset-bottom)); background:linear-gradient(transparent,var(--bg) 18%); }
+    .inputbox { display:flex; gap:9px; align-items:flex-end; background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:9px 9px 9px 15px; }
+    textarea { flex:1; resize:none; border:0; outline:0; background:transparent; color:var(--text); font:inherit; line-height:1.4; max-height:130px; min-height:28px; padding:4px 0; }
+    textarea::placeholder { color:#777b86; }
+    button { border:0; cursor:pointer; color:#141519; background:#e5e7ec; border-radius:50%; width:40px; height:40px; font-size:20px; flex:0 0 40px; }
+    button:active { transform:scale(.96); }
+    .note { text-align:center; color:#777b86; font-size:11px; line-height:1.4; margin:9px 10px 0; }
+    .toolbar { display:flex; justify-content:flex-end; margin-bottom:8px; }
+    .clear { background:transparent; color:var(--muted); width:auto; height:auto; border-radius:8px; padding:6px 8px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">NEXUS</div>
+    <div class="status"><span class="dot"></span> прототип · модель не подключена</div>
+  </header>
+  <main>
+    <section class="welcome" id="welcome">
+      <h1>NEXUS</h1>
+      <p>Твоё пространство для историй и ролевых миров.<br>Начнём с чистого листа.</p>
+    </section>
+    <div class="toolbar"><button class="clear" id="clear" type="button">Очистить диалог</button></div>
+    <section id="messages" aria-live="polite"></section>
+    <div class="composer">
+      <div class="inputbox">
+        <textarea id="prompt" rows="1" placeholder="Напиши сообщение..." aria-label="Сообщение"></textarea>
+        <button id="send" type="button" aria-label="Отправить">↑</button>
+      </div>
+      <div class="note">Это первый макет интерфейса. Ответы ИИ и долговременная память пока не подключены.</div>
+    </div>
+  </main>
+<script>
+  const key = 'nexus-prototype-chat-v1';
+  const messagesEl = document.getElementById('messages');
+  const welcome = document.getElementById('welcome');
+  const input = document.getElementById('prompt');
+  let messages = [];
+  try { messages = JSON.parse(localStorage.getItem(key) || '[]'); } catch { messages = []; }
+
+  function render() {
+    messagesEl.innerHTML = '';
+    welcome.style.display = messages.length ? 'none' : 'block';
+    for (const item of messages) {
+      const bubble = document.createElement('div');
+      bubble.className = 'msg ' + (item.role === 'user' ? 'user' : 'assistant');
+      if (item.role !== 'user') {
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.textContent = 'NEXUS';
+        bubble.appendChild(tag);
+      }
+      const body = document.createElement('div');
+      body.textContent = item.text;
+      bubble.appendChild(body);
+      messagesEl.appendChild(bubble);
+    }
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+  function send() {
+    const text = input.value.trim();
+    if (!text) return;
+    messages.push({role:'user', text});
+    messages.push({role:'assistant', text:'Сообщение сохранено в макете. Подключение настоящей ИИ-модели — следующий этап.'});
+    localStorage.setItem(key, JSON.stringify(messages));
+    input.value = '';
+    input.style.height = 'auto';
+    render();
+  }
+  document.getElementById('send').addEventListener('click', send);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+  input.addEventListener('input', () => { input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,130)+'px'; });
+  document.getElementById('clear').addEventListener('click', () => {
+    if (!confirm('Очистить историю этого макета?')) return;
+    messages = [];
+    localStorage.removeItem(key);
+    render();
+  });
+  render();
+</script>
+</body>
+</html>
